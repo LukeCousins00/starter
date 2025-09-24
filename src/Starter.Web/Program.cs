@@ -1,6 +1,4 @@
-using System.Reflection;
 using System.Text.Json.Serialization;
-using MassTransit;
 using Starter.ServiceDefaults;
 using Starter.Web.AppConfiguration;
 
@@ -17,6 +15,7 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
 
+// CORS for if the frontend is hosted separately
 builder.Services.AddCors(cfg =>
 {
     cfg.AddDefaultPolicy(x =>
@@ -24,18 +23,6 @@ builder.Services.AddCors(cfg =>
         x.WithOrigins(builder.Configuration[$"{FrontendOptions.SectionName}:{nameof(FrontendOptions.BaseAddress)}"]!);
         x.AllowAnyMethod();
         x.AllowAnyHeader();
-    });
-});
-
-builder.Services.AddMassTransit(x =>
-{
-    x.AddConsumers(Assembly.GetExecutingAssembly());
-
-    x.UsingRabbitMq((ctx, cfg) =>
-    {
-        var host = builder.Configuration.GetConnectionString("queue");
-        cfg.Host(host);
-        cfg.ConfigureEndpoints(ctx);
     });
 });
 

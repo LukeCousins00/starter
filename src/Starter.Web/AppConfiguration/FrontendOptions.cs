@@ -6,5 +6,6 @@ public class FrontendOptions
 {
     public const string SectionName = nameof(FrontendOptions);
 
-    [Required] public string BaseAddress { get; init; } = null!;
+    [Required]
+    public string BaseAddress { get; init; } = null!;
 }

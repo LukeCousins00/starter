@@ -1,20 +1,21 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <Sdk Name="Aspire.AppHost.Sdk" Version="9.4.0" />
+	<Sdk Name="Aspire.AppHost.Sdk" Version="9.4.2" />
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <UserSecretsId>2417b451-f4ab-4b73-9b80-5fdf6113fe48</UserSecretsId>
-  </PropertyGroup>
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<UserSecretsId>2417b451-f4ab-4b73-9b80-5fdf6113fe48</UserSecretsId>
+		<TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Aspire.Hosting.AppHost" />
-    <PackageReference Include="CommunityToolkit.Aspire.Hosting.NodeJS.Extensions" />
-    <PackageReference Include="Scalar.Aspire" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Aspire.Hosting.AppHost" />
+		<PackageReference Include="CommunityToolkit.Aspire.Hosting.NodeJS.Extensions" />
+		<PackageReference Include="Scalar.Aspire" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Starter.Web\Starter.Web.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\Starter.Web\Starter.Web.csproj" />
+	</ItemGroup>
 
 </Project>
