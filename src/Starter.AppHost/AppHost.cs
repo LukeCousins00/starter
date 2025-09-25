@@ -3,13 +3,19 @@ using Scalar.Aspire;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
-var web = builder.AddProject<Starter_Web>("web")
-    .WithExternalHttpEndpoints();
+var sqlServer = builder.AddSqlServer("sqlserver")
+    .WithLifetime(ContainerLifetime.Persistent)
+    .WithDataVolume("sqlserver-data");
 
-var ui = builder.AddPnpmApp("ui", "../starter.Client", scriptName: "dev")
+var db = sqlServer.AddDatabase("db", databaseName: "Database");
+
+var web = builder.AddProject<Starter_Web>("web")
+    .WithExternalHttpEndpoints()
+    .WithReference(db).WaitFor(db);
+
+var ui = builder.AddViteApp("ui", "../starter.Client", packageManager: "pnpm")
     .WithPnpmPackageInstallation()
-    .WithHttpEndpoint(env: "VITE_PORT")
-    .WithEnvironment("VITE_API_URL", web.GetEndpoint("https"))
+    .WithEnvironment("API_URL", web.GetEndpoint("https"))
     .WithExternalHttpEndpoints();
 
 web.WithEnvironment($"FrontendOptions__BaseAddress", ui.GetEndpoint("http"));

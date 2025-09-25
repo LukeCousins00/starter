@@ -1,5 +1,4 @@
-﻿
-using Hangfire;
+﻿using Hangfire;
 using Hangfire.Common;
 using Hangfire.SqlServer;
 using Microsoft.AspNetCore.Builder;
