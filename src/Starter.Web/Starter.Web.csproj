@@ -5,6 +5,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\Starter.Infrastructure\Starter.Infrastructure.csproj" />
       <ProjectReference Include="..\Starter.ServiceDefaults\Starter.ServiceDefaults.csproj" />
     </ItemGroup>
 
