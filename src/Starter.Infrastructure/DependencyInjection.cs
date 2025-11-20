@@ -72,12 +72,12 @@ public static class DependencyInjection
         var jobManager = scopedProvider.GetRequiredService<IRecurringJobManager>();
         var configuration = scopedProvider.GetRequiredService<IConfiguration>();
 
-        AddHangfireJobs(jobManager, scopedProvider.GetServices<HangfireJob>(), configuration);
+        AddHangfireJobs(scopedProvider.GetServices<HangfireJob>());
         app.UseHangfireDashboard();
 
         return;
 
-        void AddHangfireJobs(IRecurringJobManager jobManager, IEnumerable<HangfireJob> jobs, IConfiguration configuration)
+        void AddHangfireJobs(IEnumerable<HangfireJob> jobs)
         {
             foreach (var job in jobs)
             {
