@@ -6,6 +6,6 @@ export const Route = createFileRoute('/')({
 
 function App() {
   return (
-      <h1>Project L</h1>
+      <h1>Starter</h1>
   )
 }

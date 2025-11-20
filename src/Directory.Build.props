@@ -13,7 +13,7 @@
 
 	<PropertyGroup>
 		<!-- Suppress warnings caused by dependencies we don't control -->
-		<NoWarn></NoWarn>
+		<NoWarn>NU1903</NoWarn>
 	</PropertyGroup>
 
 </Project>

@@ -20,13 +20,13 @@ const config = defineConfig({
     },
   },
   server: {
-    port: parseInt(process.env.PORT!),
+    allowedHosts: ['host.docker.internal'],
+    host: true,
     proxy: {
-      "/api": {
-        target: process.env.API_URL!,
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ""),
-      },
+      '/api': {
+        target: process.env.API_HTTPS || process.env.API_HTTP,
+        changeOrigin: true
+      }
     },
   },
 });

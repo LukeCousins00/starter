@@ -1,32 +1,50 @@
 using Projects;
-using Scalar.Aspire;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
-var sqlServer = builder.AddSqlServer("sqlserver")
-    .WithLifetime(ContainerLifetime.Persistent)
-    .WithDataVolume("sqlserver-data");
+builder.AddAzureContainerAppEnvironment("env");
+
+var sqlServer = builder
+    .AddAzureSqlServer("sqlserver")
+    .RunAsContainer(cfg =>
+    {
+        cfg.WithContainerName("starter-sql-server");
+        cfg.WithLifetime(ContainerLifetime.Persistent);
+        cfg.WithDataVolume("starter-sql-server-data");
+    });
 
 var db = sqlServer.AddDatabase("db", databaseName: "Database");
 
-var web = builder.AddProject<Starter_Web>("web")
+var api = builder.AddProject<Starter_Web>("web")
+    .WithHttpHealthCheck("/health")
     .WithExternalHttpEndpoints()
-    .WithReference(db).WaitFor(db);
-
-var ui = builder.AddViteApp("ui", "../starter.Client")
-    .WithPnpm();
-    // .WithEnvironment("API_URL", web.GetEndpoint("https"))
-    // .WithExternalHttpEndpoints();
-
-web.WithEnvironment($"FrontendOptions__BaseAddress", ui.GetEndpoint("http"));
-
-builder.AddScalarApiReference(options =>
+    .WithReference(db).WaitFor(db)
+    .WithUrls(context =>
     {
-        options
-            .WithTheme(ScalarTheme.BluePlanet)
-            .PreferHttpsEndpoint()
-            .AllowSelfSignedCertificates();
+        foreach (var u in context.Urls)
+        {
+            u.DisplayLocation = UrlDisplayLocation.DetailsOnly;
+        }
+
+        context.Urls.Add(new()
+        {
+            Url = "/scalar",
+            DisplayText = "API Reference",
+            Endpoint = context.GetEndpoint("https")
+        });
     })
-    .WithApiReference(web);
+    .PublishAsAzureContainerApp((infra, app) =>
+    {
+        // Scale to zero when idle
+        app.Template.Scale.MinReplicas = 0;
+    });
+
+var frontend = builder.AddViteApp("ui", "../Starter.Client")
+    .WithEndpoint("http", e => e.Port = 9080)
+    .WithReference(api)
+    .WithUrl("", "Starter");
+
+// Publish: Embed frontend build output in API container
+api.PublishWithContainerFiles(frontend, "wwwroot");
 
 builder.Build().Run();
