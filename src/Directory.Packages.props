@@ -29,7 +29,7 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.12.0" />
     <PackageVersion Include="Refit" Version="8.0.0" />
     <PackageVersion Include="Refit.HttpClientFactory" Version="8.0.0" />
-    <PackageVersion Include="Scalar.Aspire" Version="0.4.2" />
+    <PackageVersion Include="Scalar.Aspire" Version="0.7.4" />
     <PackageVersion Include="SendGrid" Version="9.29.3" />
   </ItemGroup>
 </Project>

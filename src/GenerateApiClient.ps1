@@ -2,7 +2,7 @@
 
 # Configuration
 $apiUrl = "https://localhost:4001/openapi/v1.json"
-$outputFile = "./../ProjectL.Web/open-api-schema.json"
+$outputFile = "./../Starter.Web/open-api-schema.json"
 $outputDir = "./src/api"
 $apiName = "api.ts"
 
