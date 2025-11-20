@@ -31,6 +31,8 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 
+app.MapDefaultEndpoints();
+
 app.UseInfrastructureServices();
 
 app.UseHttpsRedirection();
