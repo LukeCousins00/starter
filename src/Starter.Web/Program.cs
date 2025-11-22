@@ -17,7 +17,16 @@ builder.Services
     .AddInfrastructureServices(builder.Configuration)
     .AddHttpContextAccessor()
     .AddOpenApi()
-    .AddSingleton<GameStateService>();
+    .AddSingleton<GameStateService>()
+    .AddCors(options =>
+    {
+        options.AddDefaultPolicy(policy =>
+        {
+            policy.AllowAnyOrigin()
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        });
+    });
 
 builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =>
 {
@@ -39,6 +48,8 @@ app.MapDefaultEndpoints();
 
 app.UseInfrastructureServices();
 
+app.UseCors();
+
 app.UseHttpsRedirection();
 
 // Game board SSE endpoints
@@ -46,24 +57,21 @@ var gameStateService = app.Services.GetRequiredService<GameStateService>();
 
 app.MapGet("/api/game/events", (CancellationToken cancellationToken) =>
 {
-    async IAsyncEnumerable<Microsoft.AspNetCore.Http.SseItem<object>> GetGameEvents(
+    async IAsyncEnumerable<object> GetGameEvents(
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        // Send a ping immediately to establish connection
+        yield return new { type = "ping", data = "connected" };
+
         await foreach (var evt in gameStateService.Subscribe("default", cancellationToken))
         {
-            yield return new Microsoft.AspNetCore.Http.SseItem<object>(
-                evt.Payload,
-                eventType: evt.Type
-            )
-            {
-                ReconnectionInterval = TimeSpan.FromSeconds(5)
-            };
+            // Include event type in payload for frontend to handle
+            yield return new { type = evt.Type, data = evt.Payload };
         }
     }
 
     return TypedResults.ServerSentEvents(GetGameEvents(cancellationToken));
 })
-.Produces("text/event-stream")
 .WithName("GetGameEvents")
 .WithOpenApi();
 

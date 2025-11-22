@@ -16,14 +16,47 @@ export function useSSE(url: string | null) {
     const eventSource = new EventSource(url);
     eventSourceRef.current = eventSource;
 
+    // Check connection status using readyState
+    const checkConnection = () => {
+      if (eventSource.readyState === EventSource.OPEN) {
+        setIsConnected(true);
+        return true;
+      } else if (eventSource.readyState === EventSource.CONNECTING) {
+        setIsConnected(false);
+        return false;
+      } else if (eventSource.readyState === EventSource.CLOSED) {
+        setIsConnected(false);
+        return false;
+      }
+      return false;
+    };
+
+    // Check immediately and periodically until connected
+    let interval: NodeJS.Timeout | null = null;
+    if (!checkConnection()) {
+      interval = setInterval(() => {
+        if (checkConnection()) {
+          if (interval) clearInterval(interval);
+        }
+      }, 100);
+    }
+
     eventSource.onopen = () => {
       setIsConnected(true);
       console.log('SSE connected');
+      clearInterval(interval);
     };
 
     eventSource.onmessage = (event) => {
+      setIsConnected(true); // If we receive a message, we're connected
+      if (interval) clearInterval(interval);
       try {
         const data = JSON.parse(event.data);
+        // Ignore ping messages, they're just for connection confirmation
+        if (data.type === 'ping') {
+          console.log('SSE connection confirmed');
+          return;
+        }
         setLastMessage({
           type: 'message',
           payload: data
@@ -35,6 +68,8 @@ export function useSSE(url: string | null) {
 
     // Handle custom event types - SSE sends event type as the event name
     eventSource.addEventListener('game_state', (event: MessageEvent) => {
+      setIsConnected(true); // If we receive an event, we're connected
+      clearInterval(interval);
       try {
         const data = JSON.parse(event.data);
         setLastMessage({
@@ -47,6 +82,7 @@ export function useSSE(url: string | null) {
     });
 
     eventSource.addEventListener('token_moved', (event: MessageEvent) => {
+      setIsConnected(true);
       try {
         const data = JSON.parse(event.data);
         setLastMessage({
@@ -59,6 +95,7 @@ export function useSSE(url: string | null) {
     });
 
     eventSource.addEventListener('token_added', (event: MessageEvent) => {
+      setIsConnected(true);
       try {
         const data = JSON.parse(event.data);
         setLastMessage({
@@ -71,6 +108,7 @@ export function useSSE(url: string | null) {
     });
 
     eventSource.addEventListener('background_changed', (event: MessageEvent) => {
+      setIsConnected(true);
       try {
         const data = JSON.parse(event.data);
         setLastMessage({
@@ -83,12 +121,16 @@ export function useSSE(url: string | null) {
     });
 
     eventSource.onerror = (error) => {
-      console.error('SSE error:', error);
-      setIsConnected(false);
+      console.error('SSE error:', error, 'readyState:', eventSource.readyState);
+      clearInterval(interval);
+      if (eventSource.readyState === EventSource.CLOSED) {
+        setIsConnected(false);
+      }
       // EventSource will automatically attempt to reconnect
     };
 
     return () => {
+      clearInterval(interval);
       eventSource.close();
       eventSourceRef.current = null;
     };

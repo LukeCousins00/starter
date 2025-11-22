@@ -8,14 +8,14 @@ var sqlServer = builder
     .AddAzureSqlServer("sqlserver")
     .RunAsContainer(cfg =>
     {
-        cfg.WithContainerName("starter-sql-server");
+        cfg.WithContainerName("starter-new-sql-server");
         cfg.WithLifetime(ContainerLifetime.Persistent);
-        cfg.WithDataVolume("starter-sql-server-data");
+        // cfg.WithDataVolume("starter-sql-server-data");
     });
 
 var db = sqlServer.AddDatabase("db", databaseName: "Database");
 
-var api = builder.AddProject<Starter_Web>("web")
+var api = builder.AddProject<Starter_Web>("api")
     .WithHttpHealthCheck("/health")
     .WithExternalHttpEndpoints()
     .WithReference(db).WaitFor(db)
@@ -43,6 +43,12 @@ var frontend = builder.AddViteApp("ui", "../Starter.Client")
     .WithEndpoint("http", e => e.Port = 9080)
     .WithReference(api)
     .WithUrl("", "Starter");
+
+// Add dev tunnel to expose frontend UI and API publicly
+builder.AddDevTunnel("dev-tunnel")
+    .WithReference(frontend)
+    .WithReference(api)
+    .WithAnonymousAccess();
 
 // Publish: Embed frontend build output in API container
 api.PublishWithContainerFiles(frontend, "wwwroot");

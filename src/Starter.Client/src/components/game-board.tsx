@@ -39,6 +39,7 @@ export function GameBoard() {
   });
   const [backgroundUrl, setBackgroundUrl] = useState('');
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number; y: number } | null>(null);
@@ -67,9 +68,9 @@ export function GameBoard() {
     const relativeX = screenX - boardRect.left;
     const relativeY = screenY - boardRect.top;
     
-    // Account for pan offset
-    const boardX = relativeX - panOffset.x;
-    const boardY = relativeY - panOffset.y;
+    // Account for pan offset and zoom
+    const boardX = (relativeX - panOffset.x) / zoom;
+    const boardY = (relativeY - panOffset.y) / zoom;
     
     // Snap to grid
     const snappedX = Math.round(boardX / QUADRANT_SIZE) * QUADRANT_SIZE;
@@ -79,22 +80,60 @@ export function GameBoard() {
       x: Math.max(0, Math.min(BOARD_SIZE - QUADRANT_SIZE, snappedX)),
       y: Math.max(0, Math.min(BOARD_SIZE - QUADRANT_SIZE, snappedY))
     };
-  }, [panOffset]);
+  }, [panOffset, zoom]);
 
-  // Handle WebSocket messages
+  // Handle zoom with mouse wheel
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    e.preventDefault();
+    
+    if (!boardRef.current) return;
+    
+    const boardRect = boardRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - boardRect.left;
+    const mouseY = e.clientY - boardRect.top;
+    
+    // Calculate zoom factor (zoom in on scroll down, zoom out on scroll up)
+    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+    const newZoom = Math.max(0.25, Math.min(4, zoom * zoomFactor));
+    
+    // Calculate the point under the mouse in board coordinates before zoom
+    const boardX = (mouseX - panOffset.x) / zoom;
+    const boardY = (mouseY - panOffset.y) / zoom;
+    
+    // Adjust pan offset to keep the point under the mouse fixed
+    const newPanX = mouseX - boardX * newZoom;
+    const newPanY = mouseY - boardY * newZoom;
+    
+    setZoom(newZoom);
+    setPanOffset({ x: newPanX, y: newPanY });
+  }, [zoom, panOffset]);
+
+  // Handle SSE messages
   useEffect(() => {
     if (!lastMessage) return;
 
-    switch (lastMessage.type) {
+    // Handle both direct event listeners and message events with type in payload
+    const messageType = lastMessage.type === 'message' && lastMessage.payload?.type 
+      ? lastMessage.payload.type 
+      : lastMessage.type;
+    
+    const payload = lastMessage.type === 'message' && lastMessage.payload?.data
+      ? lastMessage.payload.data
+      : lastMessage.payload;
+
+    switch (messageType) {
       case 'game_state':
-        setGameState(lastMessage.payload);
+        setGameState({
+          background: payload.background || '',
+          tokens: payload.tokens || []
+        });
         break;
       case 'token_moved':
         setGameState(prev => ({
           ...prev,
           tokens: prev.tokens.map(t =>
-            t.id === lastMessage.payload.tokenId
-              ? { ...t, x: lastMessage.payload.x, y: lastMessage.payload.y }
+            t.id === payload.tokenId
+              ? { ...t, x: payload.x, y: payload.y }
               : t
           )
         }));
@@ -102,27 +141,17 @@ export function GameBoard() {
       case 'token_added':
         setGameState(prev => ({
           ...prev,
-          tokens: [...prev.tokens, lastMessage.payload]
+          tokens: [...prev.tokens, payload]
         }));
         break;
       case 'background_changed':
         setGameState(prev => ({
           ...prev,
-          background: lastMessage.payload.url
+          background: payload.url
         }));
         break;
     }
   }, [lastMessage]);
-
-  // Sync state to WebSocket when connected
-  useEffect(() => {
-    if (isConnected && user) {
-      sendMessage({
-        type: 'join_game',
-        payload: { userId: user.id, username: user.username }
-      });
-    }
-  }, [isConnected, user, sendMessage]);
 
   const handleLogin = () => {
     if (!username.trim()) return;
@@ -383,6 +412,7 @@ export function GameBoard() {
             className="flex-1 relative overflow-hidden cursor-grab active:cursor-grabbing"
             onMouseDown={handleMouseDown}
             onContextMenu={handleContextMenu}
+            onWheel={handleWheel}
           >
             <div
               ref={canvasRef}
@@ -390,7 +420,8 @@ export function GameBoard() {
               style={{
                 width: BOARD_SIZE,
                 height: BOARD_SIZE,
-                transform: `translate(${panOffset.x}px, ${panOffset.y}px)`,
+                transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoom})`,
+                transformOrigin: '0 0',
                 backgroundImage: gameState.background
                   ? `url(${gameState.background})`
                   : 'none',
@@ -444,7 +475,7 @@ export function GameBoard() {
 
       {hasToken && (
         <div className="p-4 border-t text-sm text-muted-foreground flex-shrink-0">
-          Drag the board to pan around. Use arrow keys to move your token (locked to 32px grid).
+          Drag the board to pan around. Scroll to zoom in/out. Use arrow keys to move your token (locked to 32px grid).
         </div>
       )}
     </div>
